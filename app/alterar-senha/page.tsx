@@ -69,7 +69,7 @@ function AlterarSenhaContent() {
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
           <CheckSquare className="h-6 w-6 text-primary-foreground" />
         </div>
-        <span className="text-2xl font-bold text-foreground">TaskFlow</span>
+        <span className="text-2xl font-bold text-foreground">Advanced ToDoList</span>
       </div>
 
       <Card className="w-full max-w-md border-border/50 shadow-xl">

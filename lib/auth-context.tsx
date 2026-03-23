@@ -1,5 +1,7 @@
 "use client"
 
+import { registerUser } from "@/services/userService"
+import { loginUser, changeUserPassword } from "@/services/authService"
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
 interface User {
@@ -26,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("taskflow_user")
+    const storedUser = localStorage.getItem("advanced_user")
     if (storedUser) {
       setUser(JSON.parse(storedUser))
     }
@@ -34,89 +36,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const register = async (name: string, email: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email }),
-      })
+  try {
+    await registerUser({ name, email })
 
-      if (response.ok) {
-        return { 
-          success: true, 
-          message: "Cadastro realizado! Verifique seu email para obter a senha provisória." 
-        }
+    return { 
+      success: true, 
+      message: "Cadastro realizado! Verifique seu email para obter a senha provisória." 
+    }
+    } catch (error) {
+      if (error instanceof Error) {
+        return { success: false, message: error.message }
       }
 
-      const error = await response.json()
-      return { success: false, message: error.message || "Erro ao criar conta" }
-    } catch {
       return { success: false, message: "Erro de conexão com o servidor" }
     }
   }
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      })
+      const data = await loginUser({ email, password })
 
-      if (response.ok) {
-        const data = await response.json()
-        
-        if (data.firstLogin) {
-          return { success: true, firstLogin: true }
-        }
-
-        const userData: User = {
-          name: data.name || email.split("@")[0],
-          email: email,
-          token: data.token
-        }
-        
-        setUser(userData)
-        localStorage.setItem("taskflow_user", JSON.stringify(userData))
-        
-        return { success: true, firstLogin: false }
+      if (data.firstLogin) {
+        return { success: true, firstLogin: true }
       }
 
-      const error = await response.json()
-      return { success: false, message: error.message || "Email ou senha inválidos" }
-    } catch {
+      const userData: User = {
+        name: data.name || email.split("@")[0],
+        email,
+        token: data.token,
+      }
+
+      setUser(userData)
+      localStorage.setItem("advanced_user", JSON.stringify(userData)) 
+
+      return { success: true, firstLogin: false }
+    } catch (error) {
+      if (error instanceof Error) {
+        return { success: false, message: error.message }
+      }
+
       return { success: false, message: "Erro de conexão com o servidor" }
     }
   }
 
   const changePassword = async (email: string, newPassword: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, newPassword }),
-      })
+      await changeUserPassword({ email, newPassword })
 
-      if (response.ok) {
-        return { success: true, message: "Senha alterada com sucesso!" }
+      return {
+        success: true,
+        message: "Senha alterada com sucesso!",
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        return { success: false, message: error.message }
       }
 
-      const error = await response.json()
-      return { success: false, message: error.message || "Erro ao alterar senha" }
-    } catch {
       return { success: false, message: "Erro de conexão com o servidor" }
     }
   }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem("taskflow_user")
+    localStorage.removeItem("advanced_user")
   }
 
   return (
