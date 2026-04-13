@@ -4,6 +4,7 @@ export interface LoginDTO {
 }
 
 export interface LoginResponse {
+  uuid: string
   token: string
   name?: string
   firstLogin?: boolean
