@@ -5,6 +5,7 @@ import { loginUser, changeUserPassword } from "@/services/authService"
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
 interface User {
+  uuid: string
   name: string
   email: string
   token?: string
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const userData: User = {
+        uuid: data.uuid,
         name: data.name || email.split("@")[0],
         email,
         token: data.token,
