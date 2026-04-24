@@ -254,7 +254,6 @@ export default function DashboardPage() {
                           className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
-                            router.push(`/teams/${team.uuid}/settings`)
                           }}
                           title="Configurar team"
                         >
