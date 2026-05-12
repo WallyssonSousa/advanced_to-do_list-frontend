@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { UserPlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { updateTeam } from "@/services/teamService"
+import { getUsers } from "@/services/userService"
+import { UserSearchResult } from "@/types/user"
 
 interface AddUserFormProps {
   teamUUID: string
@@ -25,20 +27,48 @@ interface AddUserFormProps {
 
 export function AddUserForm({ teamUUID, onSuccess }: AddUserFormProps) {
   const [open, setOpen] = useState(false)
-  const [userUUID, setUserUUID] = useState("")
+  const [email, setEmail] = useState("")
+  const [suggestions, setSuggestions] = useState<UserSearchResult[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
+  useEffect(() => {
+    let active = true
+    const timer = window.setTimeout(async () => {
+      setIsSearching(true)
+
+      try {
+        const users = await getUsers(email.trim())
+        if (active) {
+          setSuggestions(users)
+        }
+      } catch (error) {
+        console.error("Erro ao buscar usuários:", error)
+        if (active) setSuggestions([])
+      } finally {
+        if (active) setIsSearching(false)
+      }
+    }, 250)
+
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [email])
+
   const handleAddUser = async () => {
-    const trimmedUUID = userUUID.trim()
-    if (!trimmedUUID) return
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) return
 
     setIsLoading(true)
 
     try {
       await updateTeam(teamUUID, {
-        usersToAdd: [trimmedUUID],
+        usersToAdd: [trimmedEmail],
       })
-      setUserUUID("")
+      setEmail("")
+      setShowSuggestions(false)
       setOpen(false)
       onSuccess?.()
     } catch (error) {
@@ -60,7 +90,7 @@ export function AddUserForm({ teamUUID, onSuccess }: AddUserFormProps) {
         <DialogHeader className="space-y-1">
           <DialogTitle>Adicionar usuário</DialogTitle>
           <DialogDescription>
-            Informe o UUID do usuário que deverá ser adicionado ao time.
+            Informe o Email do usuário que deverá ser adicionado ao time.
           </DialogDescription>
         </DialogHeader>
 
@@ -68,13 +98,45 @@ export function AddUserForm({ teamUUID, onSuccess }: AddUserFormProps) {
 
         <div className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="user-uuid">UUID do usuário</Label>
-            <Input
-              id="user-uuid"
-              placeholder="d0ab537d-f8f8-4bda-bd1c-e356c7416bcc"
-              value={userUUID}
-              onChange={(event) => setUserUUID(event.target.value)}
-            />
+            <Label htmlFor="user-email">Email do usuário</Label>
+            <div className="relative">
+              <Input
+                id="user-email"
+                placeholder="usuario@exemplo.com"
+                value={email}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => window.setTimeout(() => setShowSuggestions(false), 150)}
+                onChange={(event) => {
+                  setEmail(event.target.value)
+                  setShowSuggestions(true)
+                }}
+              />
+
+              {showSuggestions && (
+                <div className="absolute left-0 right-0 z-10 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-lg">
+                  {isSearching ? (
+                    <div className="p-3 text-sm text-muted-foreground">Buscando...</div>
+                  ) : suggestions.length > 0 ? (
+                    suggestions.map((user) => (
+                      <button
+                        type="button"
+                        key={user.email}
+                        className="flex w-full flex-col gap-1 border-b last:border-b-0 px-3 py-3 text-left text-sm hover:bg-accent/10"
+                        onMouseDown={() => {
+                          setEmail(user.email)
+                          setShowSuggestions(false)
+                        }}
+                      >
+                        <span className="font-medium">{user.name}</span>
+                        <span className="text-xs text-muted-foreground">{user.email}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-3 text-sm text-muted-foreground">Nenhum usuário encontrado.</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -85,7 +147,7 @@ export function AddUserForm({ teamUUID, onSuccess }: AddUserFormProps) {
           <Button
             className="flex-1"
             onClick={handleAddUser}
-            disabled={!userUUID.trim() || isLoading}
+            disabled={!email.trim() || isLoading}
           >
             {isLoading ? "Adicionando..." : "Adicionar"}
           </Button>
